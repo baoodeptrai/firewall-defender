@@ -1,5 +1,5 @@
 // ============================================================
-//  CYBER DEFENSE – game.js
+//  FIREWALL DEFENDER – game.js
 //  Nhiệm vụ hôm nay: Canvas + background map + game loop
 // ============================================================
 
@@ -72,8 +72,41 @@ const game = {
   wave:       1,      // wave hiện tại
   totalWaves: 3,
 };
+// -----------------------------------------------------------
+// DANH SÁCH TOWER CÓ THỂ MUA
+// -----------------------------------------------------------
+const TOWERS = [
+  {
+    id:      'firewall',
+    name:    'FIREWALL',
+    price:   100,
+    color:   '#00D4FF',
+    counter: 'DDoS',
+    desc:    'Chặn DDoS hiệu quả',
+  },
+  {
+    id:      'antivirus',
+    name:    'ANTIVIRUS',
+    price:   150,
+    color:   '#00FF88',
+    counter: 'Malware',
+    desc:    'Diệt Malware hiệu quả',
+  },
+  {
+    id:      'awareness',
+    name:    'AWARENESS',
+    price:   120,
+    color:   '#FFD700',
+    counter: 'Phishing',
+    desc:    'Chặn Phishing hiệu quả',
+  },
+];
 
+// Trạng thái từng slot — null = chưa đặt tower
+const slotState = [null, null, null, null];
 
+// Slot nào đang được chọn (hiện menu mua) — -1 = không có
+let selectedSlot = -1;
 // -----------------------------------------------------------
 // 5. CÁC HÀM VẼ
 // -----------------------------------------------------------
@@ -162,32 +195,190 @@ function drawSlots() {
   const { roadY, slotW, slotH, slots } = MAP;
 
   slots.forEach((slot, index) => {
-    // slot nằm phía trên đường, căn theo tâm X
     const sx = slot.x - slotW / 2;
-    const sy = roadY - slotH - 10;   // 10px khoảng cách với đường
+    const sy = roadY - slotH - 10;
+    const tower = slotState[index];   // tower đã đặt (hoặc null)
+    const isSelected = selectedSlot === index;
 
-    // nền slot
-    ctx.fillStyle = COLORS.SLOT_EMPTY;
+    // nền slot — sáng hơn nếu đang được chọn
+    ctx.fillStyle = isSelected ? '#1E4A6E' : COLORS.SLOT_EMPTY;
     ctx.fillRect(sx, sy, slotW, slotH);
 
-    // viền nét đứt (slot trống)
-    ctx.strokeStyle = COLORS.SLOT_BORDER;
-    ctx.lineWidth   = 1;
-    ctx.setLineDash([5, 4]);
+    // viền — cyan sáng nếu chọn, nét đứt nếu trống
+    ctx.strokeStyle = isSelected ? COLORS.CYAN : COLORS.SLOT_BORDER;
+    ctx.lineWidth   = isSelected ? 2 : 1;
+    if (!tower) ctx.setLineDash([5, 4]);
     ctx.strokeRect(sx, sy, slotW, slotH);
     ctx.setLineDash([]);
 
-    // dấu + ở giữa slot (gợi ý "nhấp để đặt tower")
-    ctx.fillStyle  = COLORS.TEXT_MUTED;
-    ctx.font       = "20px 'Courier New'";
-    ctx.textAlign  = 'center';
-    ctx.fillText('+', slot.x, sy + slotH / 2 + 7);
+    if (tower) {
+      // --- Slot đã có tower ---
+      // hình tròn màu tower
+      ctx.fillStyle = tower.color;
+      ctx.beginPath();
+      ctx.arc(slot.x, sy + slotH / 2, 16, 0, Math.PI * 2);
+      ctx.fill();
 
-    // số thứ tự slot nhỏ phía dưới
-    ctx.fillStyle = COLORS.TEXT_MUTED;
-    ctx.font      = "9px 'Courier New'";
-    ctx.fillText(`SLOT ${index + 1}`, slot.x, roadY - 2);
+      // chữ viết tắt (F / A / W)
+      ctx.fillStyle = '#0A1628';
+      ctx.font      = "bold 14px 'Courier New'";
+      ctx.textAlign = 'center';
+      ctx.fillText(tower.name[0], slot.x, sy + slotH / 2 + 5);
+
+      // tên tower phía dưới slot
+      ctx.fillStyle = tower.color;
+      ctx.font      = "9px 'Courier New'";
+      ctx.fillText(tower.name, slot.x, roadY - 2);
+
+    } else {
+      // --- Slot trống ---
+      ctx.fillStyle = isSelected ? COLORS.CYAN : COLORS.TEXT_MUTED;
+      ctx.font      = "20px 'Courier New'";
+      ctx.textAlign = 'center';
+      ctx.fillText('+', slot.x, sy + slotH / 2 + 7);
+
+      ctx.fillStyle = COLORS.TEXT_MUTED;
+      ctx.font      = "9px 'Courier New'";
+      ctx.fillText(`SLOT ${index + 1}`, slot.x, roadY - 2);
+    }
   });
+
+  // Vẽ menu mua tower nếu có slot đang được chọn
+  if (selectedSlot !== -1 && !slotState[selectedSlot]) {
+    drawBuyMenu(selectedSlot);
+  }
+}
+
+// -----------------------------------------------------------
+// VẼ MENU MUA TOWER (hiện phía dưới slot được click)
+// -----------------------------------------------------------
+function drawBuyMenu(slotIndex) {
+  const slot  = MAP.slots[slotIndex];
+  const menuW = 160;
+  const menuH = TOWERS.length * 52 + 12;
+  const mx    = Math.min(slot.x - menuW / 2, W - menuW - 8);  // không tràn ra phải
+  const my    = MAP.roadY + MAP.roadH + 12;
+
+  // nền menu
+  ctx.fillStyle   = '#0D2137';
+  ctx.fillRect(mx, my, menuW, menuH);
+  ctx.strokeStyle = COLORS.CYAN;
+  ctx.lineWidth   = 1.5;
+  ctx.strokeRect(mx, my, menuW, menuH);
+
+  // tiêu đề menu
+  ctx.fillStyle  = COLORS.CYAN;
+  ctx.font       = "bold 10px 'Courier New'";
+  ctx.textAlign  = 'left';
+  ctx.fillText('[ CHỌN TOWER ]', mx + 10, my + 14);
+
+  TOWERS.forEach((tower, i) => {
+    const ty          = my + 20 + i * 52;
+    const canAfford   = game.gold >= tower.price;
+    // nền từng dòng tower
+    ctx.fillStyle = canAfford ? '#162845' : '#0A1628';
+    ctx.fillRect(mx + 6, ty, menuW - 12, 44);
+
+    // chấm màu tower
+    ctx.fillStyle = canAfford ? tower.color : '#4A6080';
+    ctx.beginPath();
+    ctx.arc(mx + 20, ty + 14, 8, 0, Math.PI * 2);
+    ctx.fill();
+
+    // tên tower
+    ctx.fillStyle  = canAfford ? '#FFFFFF' : '#4A6080';
+    ctx.font       = "bold 11px 'Courier New'";
+    ctx.textAlign  = 'left';
+    ctx.fillText(tower.name, mx + 34, ty + 13);
+
+    // mô tả ngắn
+    ctx.fillStyle = canAfford ? COLORS.TEXT_MUTED : '#2A4060';
+    ctx.font      = "9px 'Courier New'";
+    ctx.fillText(tower.desc, mx + 34, ty + 26);
+
+    // giá
+    ctx.fillStyle = canAfford ? COLORS.GOLD : '#4A6080';
+    ctx.font      = "bold 10px 'Courier New'";
+    ctx.fillText(`${tower.price}G`, mx + 34, ty + 38);
+
+    // nhãn "KHÔNG ĐỦ TIỀN"
+    if (!canAfford) {
+      ctx.fillStyle = '#FF2D55';
+      ctx.font      = "9px 'Courier New'";
+      ctx.textAlign = 'right';
+      ctx.fillText('Không đủ tiền', mx + menuW - 10, ty + 38);
+    }
+  });
+}
+
+
+// -----------------------------------------------------------
+// XỬ LÝ CLICK CHUỘT
+// -----------------------------------------------------------
+canvas.addEventListener('click', function(e) {
+  // Tính tọa độ click so với canvas (không phải trang web)
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = W / rect.width;
+  const scaleY = H / rect.height;   // ← thêm dòng này
+  const mouseX = (e.clientX - rect.left) * scaleX;
+  const mouseY = (e.clientY - rect.top)  * scaleY;  // ← đổi scaleX → scaleY
+
+  const { roadY, slotW, slotH, slots } = MAP;
+
+  // --- Kiểm tra click vào slot ---
+  let clickedSlot = -1;
+  slots.forEach((slot, index) => {
+    const sx = slot.x - slotW / 2;
+    const sy = roadY - slotH - 10;
+    if (mouseX >= sx && mouseX <= sx + slotW &&
+        mouseY >= sy && mouseY <= sy + slotH) {
+      clickedSlot = index;
+    }
+  });
+
+  if (clickedSlot !== -1) {
+    if (slotState[clickedSlot]) {
+      // Slot đã có tower → click lại để bỏ chọn
+      selectedSlot = selectedSlot === clickedSlot ? -1 : clickedSlot;
+    } else {
+      // Slot trống → mở/đóng menu mua
+      selectedSlot = selectedSlot === clickedSlot ? -1 : clickedSlot;
+    }
+    return;
+  }
+
+  // --- Kiểm tra click vào menu mua tower ---
+  if (selectedSlot !== -1 && !slotState[selectedSlot]) {
+    const slot  = MAP.slots[selectedSlot];
+    const menuW = 160;
+    const menuH = TOWERS.length * 52 + 12;
+    const mx    = Math.min(slot.x - menuW / 2, W - menuW - 8);
+    const my    = MAP.roadY + MAP.roadH + 12;
+
+    TOWERS.forEach((tower, i) => {
+      const ty = my + 20 + i * 52;
+      if (mouseX >= mx + 6  && mouseX <= mx + menuW - 6 &&
+          mouseY >= ty       && mouseY <= ty + 44) {
+        buyTower(selectedSlot, tower);
+      }
+    });
+    return;
+  }
+
+  // Click vào vùng trống → đóng menu
+  selectedSlot = -1;
+});
+
+
+// -----------------------------------------------------------
+// MUA TOWER
+// -----------------------------------------------------------
+function buyTower(slotIndex, tower) {
+  if (game.gold < tower.price) return;   // không đủ tiền
+
+  game.gold         -= tower.price;      // trừ tiền
+  slotState[slotIndex] = tower;          // đặt tower vào slot
+  selectedSlot         = -1;            // đóng menu
 }
 
 
