@@ -692,9 +692,9 @@ function update() {
 function spawnEnemy() {
   const types = ['malware', 'phishing', 'ddos'];
   const typeConfigs = {
-    malware:  { hp: 80,  speed: 60,  damage: 10 },
-    phishing: { hp: 60,  speed: 80,  damage: 5  },
-    ddos:     { hp: 100, speed: 40,  damage: 15 },
+    malware:  { hp: 80,  speed: 60,  damage: 15 },
+    phishing: { hp: 40,  speed: 120,  damage: 10 },
+    ddos:     { hp: 200, speed: 30,  damage: 35 },
   };
 
   const type = types[Math.floor(Math.random() * types.length)];
@@ -1033,7 +1033,7 @@ function drawGameOver() {
 // RESET GAME — khởi động lại hoàn toàn
 // -----------------------------------------------------------
 function resetGame() {
-  game.gold       = 500;
+  game.gold       = 150;
   game.serverHP   = 100;
   game.wave       = 1;
   enemies         = [];
