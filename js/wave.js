@@ -1,27 +1,52 @@
 // ============================================================
 //  FIREWALL DEFENDER – wave.js
-//  Nhiệm vụ: Quản lý bảng tốc độ spawn và popup wave
+//  Nhiệm vụ: Quản lý cấu hình wave, spawn delay và pause giữa các wave
 // ============================================================
 
-const TOTAL_WAVES = 8;
-const WAVE_ENEMY_COUNT = 8;
+const WAVE_CONFIG = [
+  {
+    wave: 1,
+    enemies: ['malware', 'phishing', 'malware', 'phishing', 'malware'],
+    spawnDelay: 1.4,
+    pauseAfter: 3.0,
+  },
+  {
+    wave: 2,
+    enemies: ['malware', 'ddos', 'phishing', 'malware', 'phishing', 'malware'],
+    spawnDelay: 1.2,
+    pauseAfter: 3.5,
+  },
+  {
+    wave: 3,
+    enemies: ['ddos', 'ransomware', 'phishing', 'malware', 'apt', 'apt'],
+    spawnDelay: 1.0,
+    pauseAfter: 0,
+  },
+];
 
-const WAVE_ENEMY_ORDER = {
-  1: ['malware','phishing','malware','phishing','malware','phishing','malware','phishing'],
-  2: ['malware','phishing','malware','ddos','phishing','malware','phishing','malware'],
-  3: ['phishing','phishing','malware','phishing','malware','phishing','ddos','phishing'],
-  4: ['malware','ddos','phishing','malware','ddos','phishing','malware','ddos'],
-  5: ['ddos','ddos','malware','phishing','ddos','ransomware','ddos','phishing'],
-  6: ['ransomware','malware','ddos','phishing','ransomware','malware','ddos','phishing'],
-  7: ['ransomware','ddos','malware','phishing','ransomware','ddos','malware','ransomware'],
-  8: ['ransomware','apt','ddos','ransomware','phishing','apt','malware','apt'],
-};
+const TOTAL_WAVES = WAVE_CONFIG.length;
+const WAVE_POPUP_WAVES = [2, 3];
 
-const WAVE_POPUP_WAVES = [3, 5, 8];
+function getWaveConfig(wave) {
+  return WAVE_CONFIG[wave - 1] || WAVE_CONFIG[0];
+}
 
-function getWaveType(wave, index) {
-  const order = WAVE_ENEMY_ORDER[wave] || WAVE_ENEMY_ORDER[1];
-  return order[index % order.length];
+function getWaveEnemyCount(wave) {
+  return getWaveConfig(wave).enemies.length;
+}
+
+function getWaveEnemyType(wave, index) {
+  const config = getWaveConfig(wave);
+  return config.enemies[index % config.enemies.length];
+}
+
+function getWaveSpawnDelay(wave) {
+  return getWaveConfig(wave).spawnDelay;
+}
+
+function getWavePauseDuration(wave) {
+  const config = getWaveConfig(wave);
+  return config.pauseAfter ?? 3.0;
 }
 
 function shouldShowWavePopup(wave) {

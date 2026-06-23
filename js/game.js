@@ -70,7 +70,7 @@ const game = {
   serverHP:   100,    // máu server
   serverMaxHP:100,
   wave:       1,      // wave hiện tại
-  totalWaves: 8,
+  totalWaves: TOTAL_WAVES,
 };
 // -----------------------------------------------------------
 // DANH SÁCH TOWER CÓ THỂ MUA
@@ -133,7 +133,6 @@ let projectiles = [];        // danh sách đạn phát ra
 let towers = [];             // danh sách towers
 let goldPopups = [];         // hiệu ứng +gold
 let spawnTimer = 0;          // bộ đếm thời gian spawn
-const SPAWN_INTERVAL = 1.5;  // cứ 1.5 giây spawn 1 quái
 const PROJECTILE_SPEED = 300; // px/giây
 const TOWER_DAMAGE = 20;      // damage mỗi phát bắn
 const TOWER_FIRE_RATE = 0.8;  // giây giữa các phát bắn
@@ -635,8 +634,9 @@ function update() {
   lastTime = now;
 
   // --- Spawn enemies ---
+  const waveSpawnDelay = getWaveSpawnDelay(game.wave);
   spawnTimer += deltaTime;
-  if (spawnTimer >= SPAWN_INTERVAL) {
+  if (spawnTimer >= waveSpawnDelay) {
     spawnEnemy();
     spawnTimer = 0;
   }
@@ -667,9 +667,13 @@ function update() {
 //     Random loại quái: malware | phishing | ddos
 // -----------------------------------------------------------
 function spawnEnemy() {
-  const type = getWaveType(game.wave, enemiesSpawnedThisWave);
+  const waveCount = getWaveEnemyCount(game.wave);
+  if (enemiesSpawnedThisWave >= waveCount) return;
+
+  const type = getWaveEnemyType(game.wave, enemiesSpawnedThisWave);
   const enemy = createEnemy(type);
   enemies.push(enemy);
+  enemiesSpawnedThisWave++;
   console.log(`✓ Spawned ${type} enemy at x=${enemy.x}`);
 }
 
@@ -751,6 +755,7 @@ function setState(newState, options = {}) {
 
   if (newState === STATE.WAVE_CLEAR) {
     stateData.waveClearTimer = 0;
+    stateData.waveClearDuration = options.waveClearDuration ?? 3.0;
     enemies = [];
     projectiles = [];
   }
@@ -1056,16 +1061,6 @@ function resetWaveCounters() {
 // -----------------------------------------------------------
 // PATCH: spawnEnemy() cũ → gắn thêm đếm wave + check done
 // -----------------------------------------------------------
-const _origSpawnEnemy = spawnEnemy;
-spawnEnemy = function() {
-  if (currentState !== STATE.PLAYING) return;
-  if (enemiesSpawnedThisWave >= WAVE_ENEMY_COUNT) return;
-
-  _origSpawnEnemy();
-  enemiesSpawnedThisWave++;
-};
-
-
 // -----------------------------------------------------------
 // PATCH: checkCollisions() cũ → thêm kiểm tra enemy đến đích
 // -----------------------------------------------------------
@@ -1082,17 +1077,12 @@ checkCollisions = function() {
 
   // Sau khi xóa enemy, kiểm tra xem wave đã clear chưa
   if (currentState === STATE.PLAYING) {
-    const allSpawned = enemiesSpawnedThisWave >= WAVE_ENEMY_COUNT;
+    const allSpawned = enemiesSpawnedThisWave >= getWaveEnemyCount(game.wave);
     const noEnemies  = enemies.length === 0;
     if (allSpawned && noEnemies) {
+      const pauseDuration = getWavePauseDuration(game.wave);
       game.wave++;
-      if (game.wave > game.totalWaves) {
-        // Thắng game
-        setState(STATE.WAVE_CLEAR);
-        // Sau khi WAVE_CLEAR hiển thị, sẽ chuyển sang GAME_OVER (thắng)
-      } else {
-        setState(STATE.WAVE_CLEAR);
-      }
+      setState(STATE.WAVE_CLEAR, { waveClearDuration: pauseDuration });
       resetWaveCounters();
     }
   }
@@ -1122,9 +1112,9 @@ function stateGameLoop() {
 
     // -------------------------------------------------------
     case STATE.PLAYING:
-      // Chạy đúng logic update cũ
+      const waveSpawnDelay = getWaveSpawnDelay(game.wave);
       spawnTimer += dt;
-      if (spawnTimer >= SPAWN_INTERVAL) {
+      if (spawnTimer >= waveSpawnDelay) {
         spawnEnemy();
         spawnTimer = 0;
       }
