@@ -88,7 +88,7 @@ const GuideSystem = {
   ENEMY_POPUP_TIMEOUT: 8, // giây tự đóng
 
   // Nút ? để mở hướng dẫn (vị trí cố định)
-HELP_BTN: { x: 40, y: 46, r: 16 },
+HELP_BTN: { x: 40, y: 60, r: 16 },
 
   // --------------------------------------------------------
   // Mở / đóng bảng hướng dẫn
