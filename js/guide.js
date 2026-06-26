@@ -72,7 +72,6 @@ const TOWER_COLORS_GUIDE = {
   'ANTIVIRUS':  '#00FF88',
   'AWARENESS':  '#FFD700',
   'ENCRYPTION': '#CC00FF',
-  'IDS/IPS':    '#FF6B00',
 };
 
 // -----------------------------------------------------------
@@ -89,8 +88,7 @@ const GuideSystem = {
   ENEMY_POPUP_TIMEOUT: 8, // giây tự đóng
 
   // Nút ? để mở hướng dẫn (vị trí cố định)
-  HELP_BTN: { x: 860, y: 46, r: 16 },
-
+HELP_BTN: { x: 40, y: 46, r: 16 },
 
   // --------------------------------------------------------
   // Mở / đóng bảng hướng dẫn
@@ -321,7 +319,6 @@ const GuideSystem = {
       { name: 'ANTIVIRUS',  cost: '80G',  dmg: '25', range: '120', best: 'Malware',         color: '#00FF88' },
       { name: 'AWARENESS',  cost: '60G',  dmg: '15', range: '100', best: 'Phishing',         color: '#FFD700' },
       { name: 'ENCRYPTION', cost: '150G', dmg: '30', range: '130', best: 'Ransomware',      color: '#CC00FF' },
-      { name: 'IDS/IPS',   cost: '200G', dmg: '35', range: '200', best: 'APT, DDoS',        color: '#FF6B00' },
     ];
 
     // Header
