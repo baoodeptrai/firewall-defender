@@ -16,7 +16,7 @@ const QUIZ_DATA = {
     reward: 20,
   },
   5: {
-    question: 'Loại tấn công nào phù hợp nhất để sử dụng Firewall?',
+    question: 'Loại tấn công nào bị ngăn chặn tốt nhất khi sử dụng Firewall?',
     choices: [
       'Malware',
       'Phishing',
